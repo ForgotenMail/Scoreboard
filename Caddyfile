@@ -1,4 +1,19 @@
-score.liamis.dev
+score.liamis.dev {
+    encode gzip
 
-encode
-reverse_proxy 127.0.0.1:5000
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+    }
+
+    reverse_proxy 127.0.0.1:5000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    log {
+        output file /var/log/caddy/scoreboard-access.log
+    }
+}

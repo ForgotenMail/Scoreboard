@@ -13,6 +13,44 @@ def get_db():
     return psycopg.connect(DB_DSN, row_factory=psycopg.rows.dict_row)
 
 
+def init_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS basketball_records (
+                id SERIAL PRIMARY KEY,
+                category TEXT NOT NULL CHECK (category IN ('1_hand_accuracy','1_hand_high_score','2_hand_accuracy','2_hand_high_score')),
+                player_name TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                verified_by TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS foosball_players (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS foosball_matches (
+                id SERIAL PRIMARY KEY,
+                player_id INTEGER NOT NULL REFERENCES foosball_players(id) ON DELETE CASCADE,
+                opponent TEXT NOT NULL,
+                player_score INTEGER NOT NULL,
+                opponent_score INTEGER NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_basketball_category_score
+            ON basketball_records(category, score DESC)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_foosball_matches_player
+            ON foosball_matches(player_id)
+        """)
+
+
 # ── Basketball ────────────────────────────────────────────────────────────────
 
 CATEGORIES = [
@@ -216,4 +254,5 @@ def serve_index():
 
 
 if __name__ == "__main__":
+    init_db()
     app.run(host="127.0.0.1", port=5000, debug=True)
